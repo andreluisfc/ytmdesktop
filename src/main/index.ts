@@ -63,7 +63,9 @@ log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}][{processType}][{lev
 log.eventLogger.format = "Electron event {eventSource}#{eventName} observed";
 
 const isSpamLogMessage = (data: unknown): boolean => typeof data === "string" && /third-party cookie will be blocked\./i.test(data);
+const isPerformanceIssueSpam = (data: unknown): boolean => typeof data === "string" && data.includes("No handler registered for issue code PerformanceIssue");
 log.hooks.push((message, transport) => {
+  if (message?.data?.some(isPerformanceIssueSpam)) return false;
   // If the transport is not a file transport then return as is
   if (transport !== log.transports.file) {
     return message;
@@ -1776,6 +1778,11 @@ app.on("ready", async () => {
   });
 
   log.info("Setup IPC handlers");
+
+  ipcMain.on("miniplayer:pip", (event, active: boolean) => {
+    if (!ytmView || event.sender !== ytmView.webContents || ytmView.webContents.isDestroyed()) return;
+    ytmView.webContents.setBackgroundThrottling(!active);
+  });
 
   // Create the permission handlers
   session.fromPartition(app.isPackaged ? "persist:ytmview" : "persist:ytmview-dev").setPermissionCheckHandler((webContents, permission) => {
