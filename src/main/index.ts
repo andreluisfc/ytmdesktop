@@ -615,6 +615,7 @@ function setupTaskbarFeatures() {
   playerStateStore.addEventListener((state: PlayerState) => {
     const hasVideo = !!state.videoDetails;
     const isPlaying = state.trackState === VideoState.Playing;
+    setTrayTooltip(state);
 
     if (process.platform == "win32") {
       const taskbarFlags = [];
@@ -697,6 +698,28 @@ function getTrayIconPath() {
 
 function setTrayIcon() {
   tray.setImage(getTrayIconPath());
+}
+
+const trayTooltipIdle = "YouTube Music Desktop";
+let currentTrayTooltip = trayTooltipIdle;
+
+function setTrayTooltip(state: PlayerState): void {
+  if (!tray) return;
+
+  const title = state.videoDetails?.title?.trim();
+  const author = state.videoDetails?.author?.trim();
+  let tooltip = trayTooltipIdle;
+  if (title && author) tooltip = `${title} — ${author}`;
+  else if (title) tooltip = title;
+
+  // Windows rejects tray tooltips longer than 128 characters.
+  if (process.platform === "win32" && tooltip.length > 127) {
+    tooltip = `${tooltip.slice(0, 124)}...`;
+  }
+  if (tooltip === currentTrayTooltip) return;
+
+  currentTrayTooltip = tooltip;
+  tray.setToolTip(tooltip);
 }
 
 // Shortcut registration
